@@ -1,0 +1,47 @@
+output "cluster_gateway_ip" {
+  description = "The IP address of the gateway used to contact the cluster nodes"
+{% if ipa_cluster_floating_ips_wanted | bool %}
+  value       =  openstack_networking_floatingip_v2.ipa_primary_floatingip_assoc.address
+{% else %}
+  value       =  openstack_compute_instance_v2.ipa_primary.network[0].fixed_ip_v4
+{% endif %}
+}
+
+{% if cluster_ssh_private_key_file is not defined %}
+output "cluster_ssh_private_key" {
+  description = "The private component of the keypair generated on cluster provision"
+  value = openstack_compute_keypair_v2.cluster_keypair.private_key
+  sensitive   = true
+}
+{% endif %}
+
+output "cluster_nodes" {
+  description = "A list of the nodes in the cluster from which an Ansible inventory will be populated"
+  value       = concat(
+    [
+      {
+        name          = openstack_compute_instance_v2.ipa_primary.name
+        ip            = openstack_compute_instance_v2.ipa_primary.network[0].fixed_ip_v4
+        groups        = ["{{ ipa_cluster_name }}_primary"],
+        facts  = {
+          openstack_project_id = data.openstack_identity_auth_scope_v3.scope.project_id
+        }
+      }
+    ],
+	[
+    for replica in openstack_compute_instance_v2.ipa_replica: {
+      name          = replica.name
+      ip            = replica.network[0].fixed_ip_v4
+      groups        = ["{{ ipa_cluster_name }}_replica"],
+      facts  = {
+        openstack_project_id = data.openstack_identity_auth_scope_v3.scope.project_id
+      }
+    }
+	]
+  )
+}
+
+output "ipa_cluster_image" {
+  description = "The id of the image used to build the ipa cluster nodes"
+  value       = "{{ ipa_cluster_previous_image | default(ipa_cluster_image) }}"
+}

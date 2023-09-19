@@ -1,0 +1,52 @@
+---
+
+# Provision the infrastructure using Terraform
+- name: Provision infrastructure
+  hosts: openstack
+  roles:
+    - ipa_infra
+  tags:
+    - always
+
+# Setup tasks now that all hosts have been added to the correct groups
+
+#- hosts: all
+
+#- hosts:
+#    - ipacluster
+#  become: yes
+#  tasks:
+#    # Ensure that the hosts in the cluster can all refer to each other by their hostname
+#    - name: Populate /etc/hosts with cluster hosts
+#      lineinfile:
+#        path: /etc/hosts
+#        regexp: "{{ hostvars[host].inventory_hostname }}"
+#        line: "{{ hostvars[host].ansible_default_ipv4.address }} {{ hostvars[host].inventory_hostname }}"
+#      loop: "{{ ansible_play_hosts }}"
+#      loop_control:
+#        loop_var: host
+
+
+# - hosts: localhost
+  # tasks:
+    # - debug: var=outputs
+      # when:
+        # - cluster_state is not defined or cluster_state == 'present'
+      # vars:
+        # Ansible has a fit when there are two 'hostvars' evaluations in a resolution chain,
+        # so we have to repeat logic here unfortunately
+        # outputs: >-
+          # {{-
+            # { "cluster_access_ip": hostvars[groups['openstack'][0]].cluster_gateway_ip } |
+              # combine(
+                # {
+                  # "openondemand_url": "https://" ~ (hostvars[groups['openstack'][0]].cluster_floating_ip_address | replace('.', '-')) ~ ".sslip.io",
+                  # "hpc_user_password": hostvars[groups['control'][0]].ansible_local.openhpc_secrets.vault_hpc_user_password
+                # }
+                # if zenith_fqdn_ood is not defined
+                # else {}
+              # )
+          # }}
+        # tags: outputs
+
+        

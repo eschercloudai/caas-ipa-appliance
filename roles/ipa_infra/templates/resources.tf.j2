@@ -1,0 +1,359 @@
+#####
+##### The identity scope we are operating in
+##### Used to output the OpenStack project ID as a fact for provisioned hosts
+#####
+data "openstack_identity_auth_scope_v3" "scope" {
+  name = "{{ ipa_cluster_name }}"
+}
+
+#####
+##### Security groups for the ipa cluster
+#####
+
+# Security group to hold common rules for the ipa cluster
+resource "openstack_networking_secgroup_v2" "secgroup_ipa_cluster" {
+  name                 = "{{ ipa_cluster_name }}-secgroup-ipa-cluster"
+  description          = "Rules for the ipa cluster nodes"
+  delete_default_rules = true   # Fully manage with terraform
+}
+
+
+## Allow all egress for all ipa cluster nodes
+resource "openstack_networking_secgroup_rule_v2" "secgroup_ipa_cluster_rule_egress_v4" {
+  direction         = "egress"
+  ethertype         = "IPv4"
+  security_group_id = "${openstack_networking_secgroup_v2.secgroup_ipa_cluster.id}"
+}
+
+## Allow all ingress between nodes in the ipa cluster
+resource "openstack_networking_secgroup_rule_v2" "secgroup_ipa_cluster_rule_ingress_internal_v4" {
+  direction         = "ingress"
+  ethertype         = "IPv4"
+{% if ipa_cluster_internal_subnet is defined %}
+  remote_ip_prefix  = "${data.openstack_networking_subnet_v2.ipa_cluster_subnet.cidr}"
+{% else %}
+  security_group_id = "{{ ipa_cluster_cidr }}"
+{% endif %}
+  security_group_id = "${openstack_networking_secgroup_v2.secgroup_ipa_cluster.id}"
+}
+
+## Allow all ingress between nodes in the ipa cluster
+resource "openstack_networking_secgroup_rule_v2" "secgroup_ipa_cluster_rule_ingress_internal_v4_icmp" {
+  direction         = "ingress"
+  ethertype         = "IPv4"
+  protocol          = "icmp"
+{% if ipa_cluster_internal_subnet is defined %}
+  remote_ip_prefix  = "${data.openstack_networking_subnet_v2.ipa_cluster_subnet.cidr}"
+{% else %}
+  security_group_id = "{{ ipa_cluster_cidr }}"
+{% endif %}
+  security_group_id = "${openstack_networking_secgroup_v2.secgroup_ipa_cluster.id}"
+}
+
+
+
+## Allow ingress on port 443 (HTTPS) from anywhere for the ipa nodes
+resource "openstack_networking_secgroup_rule_v2" "secgroup_ipa_cluster_rule_ingress_https_v4" {
+  direction = "ingress"
+  ethertype = "IPv4"
+  protocol          = "tcp"
+  port_range_min    = 443
+  port_range_max    = 443
+  security_group_id = "${openstack_networking_secgroup_v2.secgroup_ipa_cluster.id}"
+}
+
+## Allow ingress on port 80 (HTTP) from anywhere for the ipa nodes
+resource "openstack_networking_secgroup_rule_v2" "secgroup_ipa_cluster_rule_ingress_http_v4" {
+  direction = "ingress"
+  ethertype = "IPv4"
+  protocol          = "tcp"
+  port_range_min    = 80
+  port_range_max    = 80
+  security_group_id = "${openstack_networking_secgroup_v2.secgroup_ipa_cluster.id}"
+}
+resource "openstack_networking_secgroup_rule_v2" "secgroup_ipa_cluster_rule_ingress_ssh" {
+  direction = "ingress"
+  ethertype = "IPv4"
+  protocol          = "tcp"
+  port_range_min    = 22
+  port_range_max    = 22
+  security_group_id = "${openstack_networking_secgroup_v2.secgroup_ipa_cluster.id}"
+}
+
+#####
+##### Volumes
+#####
+resource "openstack_blockstorage_volume_v3" "state" {
+    name = "{{ ipa_cluster_name }}-primary-state"
+    description = "State for ipa node 1"
+    size = "{{ state_volume_size }}"
+}
+
+resource "openstack_blockstorage_volume_v3" "replica-state" {
+    count = {{ ipa_replica_count }}
+    name = "{{ ipa_cluster_name }}-replica-state-${count.index}"
+    description = "State for ipa node ${count.index + 2}"
+    size = "{{ state_volume_size }}"
+}
+
+######
+###### IPA Cluster network
+######
+
+data "openstack_networking_network_v2" "ipa_cluster_external_network" {
+  name = "{{ ipa_cluster_external_network }}"
+}
+{% if ipa_cluster_internal_network is defined %}
+data "openstack_networking_network_v2" "cluster_network" {
+  name = "{{ ipa_cluster_internal_network }}"
+}
+{% else %}
+resource "openstack_networking_network_v2" "cluster_network" {
+  name           = "{{ ipa_cluster_name }}-net"
+  admin_state_up = "true"
+}
+{% endif %}
+
+{% if ipa_cluster_internal_subnet is defined %}
+data "openstack_networking_subnet_v2" "ipa_cluster_subnet" {
+  name = "{{ ipa_cluster_internal_subnet }}"
+}
+{% else %}
+resource "openstack_networking_subnet_v2" "ipa_cluster_subnet" {
+  name       = "{{ ipa_cluster_name }}-subnet"
+  network_id = "${openstack_networking_network_v2.cluster_network.id}"
+  cidr       = "{{ ipa_cluster_cidr }}"
+  {% if ipa_cluster_nameservers %}
+  dns_nameservers = [
+  {% for nameserver in ipa_cluster_nameservers %}
+    "{{ nameserver }}"{{ ',' if not loop.last }}
+  {% endfor %}
+  ]
+  {% endif %}
+  ipa_version = 4
+}
+
+resource "openstack_networking_router_v2" "cluster_router" {
+  name                = "{{ ipa_cluster_name }}-router"
+  admin_state_up      = true
+  external_network_id = "${data.openstack_networking_network_v2.ipa_cluster_external_network.id}"
+}
+
+resource "openstack_networking_router_interface_v2" "ipa_cluster_router_interface" {
+  router_id = "${openstack_networking_router_v2.cluster_router.id}"
+  subnet_id = "${openstack_networking_subnet_v2.ipa_cluster_subnet.id}"
+}
+{% endif %}
+
+#####
+###### ipa Cluster private key
+######
+
+resource "openstack_compute_keypair_v2" "cluster_keypair" {
+  name = "{{ ipa_cluster_name }}-deploy-key"
+}
+
+
+#####
+##### IPA Cluster ports
+#####
+
+
+resource "openstack_networking_port_v2" "ipa_primary" {
+  name = "{{ ipa_cluster_name }}-ipa_primary"
+  network_id = "${data.openstack_networking_network_v2.cluster_network.id}"
+  admin_state_up = "true"
+  fixed_ip {
+{% if ipa_cluster_internal_subnet is defined %}
+    subnet_id = "${data.openstack_networking_subnet_v2.ipa_cluster_subnet.id}"
+{% else %}
+    subnet_id = "${openstack_networking_subnet_v2.ipa_cluster_subnet.id}"
+{% endif %}
+  }
+
+  security_group_ids = [
+    "${openstack_networking_secgroup_v2.secgroup_ipa_cluster.id}"
+  ]
+
+  binding {
+    vnic_type = "{{ ipa_cluster_vnic_type | default('normal') }}"
+    {% if ipa_cluster_vnic_type is defined %}
+    profile = <<EOF
+    {{ ipa_cluster_vnic_type | to_json }}
+    EOF
+    {% endif %}
+  }
+}
+
+resource "openstack_networking_port_v2" "ipa_replica" {
+  name = "{{ ipa_cluster_name }}-ipa_replica-${count.index}"
+  count = {{ ipa_replica_count }}
+  network_id = "${data.openstack_networking_network_v2.cluster_network.id}"
+  admin_state_up = "true"
+  fixed_ip {
+{% if ipa_cluster_internal_subnet is defined %}
+    subnet_id = "${data.openstack_networking_subnet_v2.ipa_cluster_subnet.id}"
+{% else %}
+    subnet_id = "${openstack_networking_subnet_v2.ipa_cluster_subnet.id}"
+{% endif %}
+  }
+
+  security_group_ids = [
+    "${openstack_networking_secgroup_v2.secgroup_ipa_cluster.id}"
+  ]
+
+  binding {
+    vnic_type = "{{ ipa_cluster_vnic_type | default('normal') }}"
+    {% if ipa_cluster_vnic_type is defined %}
+    profile = <<EOF
+    {{ ipa_cluster_vnic_type | to_json }}
+    EOF
+    {% endif %}
+  }
+}
+
+#####
+##### ipa Cluster nodes
+#####
+
+{# build list of all ssh keys we need to inject  #}
+{% set auth_keys_list = ["\"${openstack_compute_keypair_v2.cluster_keypair.public_key}\""] + ipa_cluster_user_ssh_public_keys | default([cluster_user_ssh_public_key]) %}
+
+resource "openstack_compute_instance_v2" "ipa_primary" {
+  name      = "{{ ipa_cluster_name }}-ipa-1"
+  image_id  = "{{ cluster_previous_image | default(cluster_image) }}"
+  {% if ipa_flavor_name is defined %}
+  flavor_name = "{{ ipa_flavor_name }}"
+  {% else %}
+  flavor_id = "{{ ipa_flavor }}"
+  {% endif %}
+
+  network {
+    port = "${openstack_networking_port_v2.ipa_primary.id}"
+  }
+
+  # root device:
+  block_device {
+      uuid = "{{ cluster_previous_image | default(cluster_image) }}"
+      source_type  = "image"
+      {% if ipa_cluster_use_root_volumes is defined and ipa_cluster_use_root_volumes %}
+      volume_size = {{ ipa_root_vol_size | default("20") }}
+      destination_type = "volume"
+      {% if ipa_cluster_root_volume_type is defined %}
+      volume_type = "{{ cluster_root_volume_type }}"
+      {% endif %}
+      {% else %}
+      destination_type = "local"
+      {% endif %}
+      boot_index = 0
+      delete_on_termination = true
+  }
+
+  # state volume:
+  block_device {
+      destination_type = "volume"
+      source_type  = "volume"
+      boot_index = -1
+      uuid = openstack_blockstorage_volume_v3.state.id
+  }
+
+
+  # Use cloud-init to a) inject SSH keys b) configure volumes
+  user_data = <<-EOF
+    #cloud-config
+    ssh_authorized_keys:
+      - {{ auth_keys_list | join("\n      - ")}}{# don't fix this with to_nice_yaml it will break as it will add extra single quotes around the double quoted TF vars #}
+
+    fs_setup:
+      - label: state
+        filesystem: ext4
+        device: /dev/{{ block_device_prefix }}b
+        partition: auto
+    mounts:
+        - [LABEL=state, /var/lib/state, auto, "x-systemd.required-by=nfs-server.service,x-systemd.before=nfs-server.service"]
+EOF
+  lifecycle {
+    ignore_changes = {{ ipa_cluster_tf_ignore_property_list | default([]) | to_yaml }}
+  }
+}
+
+resource "openstack_compute_instance_v2" "ipa_replica" {
+  count = {{ ipa_replica_count }}
+  name = "{{ ipa_cluster_name }}-ipa-${count.index + 2}"
+  image_id  = "{{ cluster_previous_image | default(cluster_image) }}"
+  {% if ipa_flavor_name is defined %}
+  flavor_name = "{{ ipa_flavor_name }}"
+  {% else %}
+  flavor_id = "{{ ipa_flavor }}"
+  {% endif %}
+
+  network {
+    port = "${openstack_networking_port_v2.ipa_replica[count.index].id}"
+  }
+
+  # root device:
+  block_device {
+      uuid = "{{ cluster_previous_image | default(cluster_image) }}"
+      source_type  = "image"
+      {% if ipa_cluster_use_root_volumes is defined and ipa_cluster_use_root_volumes %}
+      volume_size = {{ ipa_root_vol_size | default("20") }}
+      destination_type = "volume"
+      {% if ipa_cluster_root_volume_type is defined %}
+      volume_type = "{{ cluster_root_volume_type }}"
+      {% endif %}
+      {% else %}
+      destination_type = "local"
+      {% endif %}
+      boot_index = 0
+      delete_on_termination = true
+  }
+
+  # state volume:
+  block_device {
+      destination_type = "volume"
+      source_type  = "volume"
+      boot_index = -1
+      uuid = openstack_blockstorage_volume_v3.replica-state[count.index].id
+  }
+
+
+  # Use cloud-init to a) inject SSH keys b) configure volumes
+  user_data = <<-EOF
+    #cloud-config
+    ssh_authorized_keys:
+      - {{ auth_keys_list | join("\n      - ")}}{# don't fix this with to_nice_yaml it will break as it will add extra single quotes around the double quoted TF vars #}
+
+    fs_setup:
+      - label: state
+        filesystem: ext4
+        device: /dev/{{ block_device_prefix }}b
+        partition: auto
+    mounts:
+        - [LABEL=state, /var/lib/state, auto, "x-systemd.required-by=nfs-server.service,x-systemd.before=nfs-server.service"]
+EOF
+  lifecycle {
+    ignore_changes = {{ ipa_cluster_tf_ignore_property_list | default([]) | to_yaml }}
+  }
+  depends_on = [
+    openstack_blockstorage_volume_v3.replica-state
+  ]
+}
+
+
+#####
+##### Floating IP association for ipa_primary node
+#####
+data "openstack_networking_subnet_ids_v2" "ext_subnets" {
+  network_id = "${data.openstack_networking_network_v2.ipa_cluster_external_network.id}"
+}
+{% if ipa_cluster_floating_ips_wanted | bool %}
+resource "openstack_networking_floatingip_v2" "ipa_primary_floatingip_assoc" {
+  pool       = "${data.openstack_networking_network_v2.ipa_cluster_external_network.name}"
+  subnet_ids = "${data.openstack_networking_subnet_ids_v2.ext_subnets.ids}"
+}
+
+resource "openstack_compute_floatingip_associate_v2" "floatingip_assoc" {
+  floating_ip = "${openstack_networking_floatingip_v2.ipa_primary_floatingip_assoc.address}"
+  instance_id = "${openstack_compute_instance_v2.ipa_primary.id}"
+}
+{% endif %}
