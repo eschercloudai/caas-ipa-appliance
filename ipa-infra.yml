@@ -10,21 +10,20 @@
 
 # Setup tasks now that all hosts have been added to the correct groups
 
-#- hosts: all
 
-#- hosts:
-#    - ipacluster
-#  become: yes
-#  tasks:
-#    # Ensure that the hosts in the cluster can all refer to each other by their hostname
-#    - name: Populate /etc/hosts with cluster hosts
-#      lineinfile:
-#        path: /etc/hosts
-#        regexp: "{{ hostvars[host].inventory_hostname }}"
-#        line: "{{ hostvars[host].ansible_default_ipv4.address }} {{ hostvars[host].inventory_hostname }}"
-#      loop: "{{ ansible_play_hosts }}"
-#      loop_control:
-#        loop_var: host
+# Ensure that the secrets are generated and persisted in secure storge (TODO) or locally
+- name: Generate and persist secrets
+  hosts: openstack
+  gather_facts: no
+  roles:
+    - persist_ipa_secrets
+  tags: always
+
+- import_playbook: vendor/eschercloudai/ansible-freeipa-appliance/ansible/validate.yml
+  when: cluster_state is not defined or (cluster_state is defined and cluster_state != "absent")
+
+- import_playbook: vendor/eschercloudai/ansible-freeipa-appliance/ansible/bootstrap.yml
+- import_playbook: vendor/eschercloudai/ansible-freeipa-appliance/ansible/freeipa.yml
 
 
 # - hosts: localhost
@@ -49,4 +48,3 @@
           # }}
         # tags: outputs
 
-        

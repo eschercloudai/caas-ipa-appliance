@@ -4,4 +4,4 @@
 *.tfstate
 *.tfstate.backup
 /dev.sh
-/vendor
+/environments/*/passwords

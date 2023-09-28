@@ -1,0 +1,4 @@
+---
+# this is the list of tasks we should use when using device42 to store the secrets
+- name: Fail becuse the device42 secret storage is not impplemented yet
+  fail:

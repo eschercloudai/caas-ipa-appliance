@@ -221,7 +221,7 @@ resource "openstack_networking_port_v2" "ipa_replica" {
 
 resource "openstack_compute_instance_v2" "ipa_primary" {
   name      = "{{ ipa_cluster_name }}-ipa-1"
-  image_id  = "{{ cluster_previous_image | default(cluster_image) }}"
+  image_id  = "{{ cluster_previous_image | default(ipa_cluster_image) }}"
   {% if ipa_flavor_name is defined %}
   flavor_name = "{{ ipa_flavor_name }}"
   {% else %}
@@ -234,7 +234,7 @@ resource "openstack_compute_instance_v2" "ipa_primary" {
 
   # root device:
   block_device {
-      uuid = "{{ cluster_previous_image | default(cluster_image) }}"
+      uuid = "{{ cluster_previous_image | default(ipa_cluster_image) }}"
       source_type  = "image"
       {% if ipa_cluster_use_root_volumes is defined and ipa_cluster_use_root_volumes %}
       volume_size = {{ ipa_root_vol_size | default("20") }}
@@ -280,7 +280,7 @@ EOF
 resource "openstack_compute_instance_v2" "ipa_replica" {
   count = {{ ipa_replica_count }}
   name = "{{ ipa_cluster_name }}-ipa-${count.index + 2}"
-  image_id  = "{{ cluster_previous_image | default(cluster_image) }}"
+  image_id  = "{{ cluster_previous_image | default(ipa_cluster_image) }}"
   {% if ipa_flavor_name is defined %}
   flavor_name = "{{ ipa_flavor_name }}"
   {% else %}
@@ -293,7 +293,7 @@ resource "openstack_compute_instance_v2" "ipa_replica" {
 
   # root device:
   block_device {
-      uuid = "{{ cluster_previous_image | default(cluster_image) }}"
+      uuid = "{{ cluster_previous_image | default(ipa_cluster_image) }}"
       source_type  = "image"
       {% if ipa_cluster_use_root_volumes is defined and ipa_cluster_use_root_volumes %}
       volume_size = {{ ipa_root_vol_size | default("20") }}
