@@ -29,25 +29,25 @@ resource "openstack_networking_secgroup_rule_v2" "secgroup_ipa_cluster_rule_egre
 resource "openstack_networking_secgroup_rule_v2" "secgroup_ipa_cluster_rule_ingress_internal_v4" {
   direction         = "ingress"
   ethertype         = "IPv4"
+  security_group_id = "${openstack_networking_secgroup_v2.secgroup_ipa_cluster.id}"
 {% if ipa_cluster_internal_subnet is defined %}
   remote_ip_prefix  = "${data.openstack_networking_subnet_v2.ipa_cluster_subnet.cidr}"
 {% else %}
-  security_group_id = "{{ ipa_cluster_cidr }}"
+  remote_ip_prefix = "{{ ipa_cluster_cidr }}"
 {% endif %}
-  security_group_id = "${openstack_networking_secgroup_v2.secgroup_ipa_cluster.id}"
 }
 
 ## Allow all ingress between nodes in the ipa cluster
 resource "openstack_networking_secgroup_rule_v2" "secgroup_ipa_cluster_rule_ingress_internal_v4_icmp" {
   direction         = "ingress"
   ethertype         = "IPv4"
+  security_group_id = "${openstack_networking_secgroup_v2.secgroup_ipa_cluster.id}"
   protocol          = "icmp"
 {% if ipa_cluster_internal_subnet is defined %}
   remote_ip_prefix  = "${data.openstack_networking_subnet_v2.ipa_cluster_subnet.cidr}"
 {% else %}
-  security_group_id = "{{ ipa_cluster_cidr }}"
+  remote_ip_prefix = "{{ ipa_cluster_cidr }}"
 {% endif %}
-  security_group_id = "${openstack_networking_secgroup_v2.secgroup_ipa_cluster.id}"
 }
 
 
@@ -56,10 +56,15 @@ resource "openstack_networking_secgroup_rule_v2" "secgroup_ipa_cluster_rule_ingr
 resource "openstack_networking_secgroup_rule_v2" "secgroup_ipa_cluster_rule_ingress_https_v4" {
   direction = "ingress"
   ethertype = "IPv4"
+  security_group_id = "${openstack_networking_secgroup_v2.secgroup_ipa_cluster.id}"
   protocol          = "tcp"
   port_range_min    = 443
   port_range_max    = 443
-  security_group_id = "${openstack_networking_secgroup_v2.secgroup_ipa_cluster.id}"
+{% if ipa_cluster_internal_subnet is defined %}
+  remote_ip_prefix  = "${data.openstack_networking_subnet_v2.ipa_cluster_subnet.cidr}"
+{% else %}
+  remote_ip_prefix = "{{ ipa_cluster_cidr }}"
+{% endif %}
 }
 
 ## Allow ingress on port 80 (HTTP) from anywhere for the ipa nodes
@@ -130,7 +135,7 @@ resource "openstack_networking_subnet_v2" "ipa_cluster_subnet" {
   {% endfor %}
   ]
   {% endif %}
-  ipa_version = 4
+  ip_version = 4
 }
 
 resource "openstack_networking_router_v2" "cluster_router" {
@@ -161,7 +166,11 @@ resource "openstack_compute_keypair_v2" "cluster_keypair" {
 
 resource "openstack_networking_port_v2" "ipa_primary" {
   name = "{{ ipa_cluster_name }}-ipa_primary"
+{% if ipa_cluster_internal_network is defined %}
   network_id = "${data.openstack_networking_network_v2.cluster_network.id}"
+{% else %}
+  network_id = openstack_networking_network_v2.cluster_network.id
+{% endif %}
   admin_state_up = "true"
   fixed_ip {
 {% if ipa_cluster_internal_subnet is defined %}
@@ -188,7 +197,11 @@ resource "openstack_networking_port_v2" "ipa_primary" {
 resource "openstack_networking_port_v2" "ipa_replica" {
   name = "{{ ipa_cluster_name }}-ipa_replica-${count.index}"
   count = {{ ipa_replica_count }}
+{% if ipa_cluster_internal_network is defined %}
   network_id = "${data.openstack_networking_network_v2.cluster_network.id}"
+{% else %}
+  network_id = openstack_networking_network_v2.cluster_network.id
+{% endif %}
   admin_state_up = "true"
   fixed_ip {
 {% if ipa_cluster_internal_subnet is defined %}
@@ -261,6 +274,9 @@ resource "openstack_compute_instance_v2" "ipa_primary" {
   # Use cloud-init to a) inject SSH keys b) configure volumes
   user_data = <<-EOF
     #cloud-config
+    hostname: {{ ipa_cluster_name }}-ipa-1
+    fqdn: {{ ipa_cluster_name }}-ipa-1.{{ ipa_container_domain }}
+    prefer_fqdn_over_hostname: true
     ssh_authorized_keys:
       - {{ auth_keys_list | join("\n      - ")}}{# don't fix this with to_nice_yaml it will break as it will add extra single quotes around the double quoted TF vars #}
 
@@ -320,6 +336,9 @@ resource "openstack_compute_instance_v2" "ipa_replica" {
   # Use cloud-init to a) inject SSH keys b) configure volumes
   user_data = <<-EOF
     #cloud-config
+    hostname: {{ ipa_cluster_name }}-ipa-${count.index + 2}
+    fqdn: {{ ipa_cluster_name }}-ipa-${count.index + 2}.{{ ipa_container_domain }}
+    prefer_fqdn_over_hostname: true
     ssh_authorized_keys:
       - {{ auth_keys_list | join("\n      - ")}}{# don't fix this with to_nice_yaml it will break as it will add extra single quotes around the double quoted TF vars #}
 

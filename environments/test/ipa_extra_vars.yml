@@ -11,8 +11,10 @@ ipa_cluster_gateway_user: rocky
 ipa_cluster_name: "ipa-test"
 ipa_cluster_id: "{{ ipa_cluster_name }}"
 ipa_flavor_name: "g.2.standard"
-ipa_cluster_floating_ips_wanted: no
-
+ipa_cluster_floating_ips_wanted: yes
+ipa_cluster_cidr: "192.168.13.0/24"
+#ipa_cluster_internal_network: "antony-routable" # use this precreated vlan provider net so we can have ironic nodes
+#ipa_cluster_internal_subnet: "antony_routable_subnet" # the subnet for that netowrk to avoid extra TF hoops to jump through
 ipa_replica_count: 1
 
 ipa_cluster_user_ssh_public_keys:
@@ -24,8 +26,7 @@ ipa_cluster_user_ssh_public_keys:
 #ipa_cluster_image: 2840a5b1-ccaa-4943-99d3-05474991d727
 ipa_cluster_image: 4f34d6a1-de08-4857-b9eb-f80cc403ba2a
 #cluster_upgrade_system_packages: true # this is needed as it forces the terraform to use the target state rather then the previous state and then try and update them later. This might not be so great long term but wiith quick iteration befor the customer is on when it is safe to nuke and reboot the lot. . .this is really useful
-ipa_cluster_internal_network: "antony-routable" # use this precreated vlan provider net so we can have ironic nodes
-ipa_cluster_internal_subnet: "antony_routable_subnet" # the subnet for that netowrk to avoid extra TF hoops to jump through
+
 
 ipa_cluster_external_network: "Internet"
 
