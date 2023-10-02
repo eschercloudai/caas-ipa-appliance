@@ -117,5 +117,3 @@
     groups: "{{ hostvars[item].group_names | stackhpc.terraform.terraform_infra_expand_groups(ipa_cluster_groups_required) }}"
   loop: "{{ groups.get('cluster', []) }}"
 
-- debug:
-    var: groups
