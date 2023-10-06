@@ -3,19 +3,19 @@ appliances_environment_root: "{{ lookup('env', 'APPLIANCES_ENVIRONMENT_ROOT') }}
 
 # Extra vars needed to build cluster
 #cluster_terraform_template_dir: "{{ appliances_environment_root }}/cluster_terraform_template"
-
 # Cluster instance vars
 cluster_ssh_user: rocky
 ansible_user: rocky
 ipa_cluster_gateway_user: rocky
-ipa_cluster_name: "ipa-test"
+ipa_cluster_name: "test"
+ipa_cluster_suffix: "DSkjBfsdk.iNTERNAL"
 ipa_cluster_id: "{{ ipa_cluster_name }}"
 ipa_flavor_name: "g.2.standard"
 ipa_cluster_floating_ips_wanted: yes
-ipa_cluster_cidr: "192.168.13.0/24"
-#ipa_cluster_internal_network: "antony-routable" # use this precreated vlan provider net so we can have ironic nodes
-#ipa_cluster_internal_subnet: "antony_routable_subnet" # the subnet for that netowrk to avoid extra TF hoops to jump through
-ipa_replica_count: 1
+#ipa_cluster_cidr: "192.168.13.0/24"
+ipa_cluster_internal_network: "antony-routable" # use this precreated vlan provider net so we can have ironic nodes
+ipa_cluster_internal_subnet: "antony_routable_subnet" # the subnet for that netowrk to avoid extra TF hoops to jump through
+ipa_replica_count: 2
 
 ipa_cluster_user_ssh_public_keys:
   - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBL0TOpOWI9bn2JMuwxmjuM/z3aDYu7fDQk68p+Wafe3 a.cleave@eshchercloud.ai"
