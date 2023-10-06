@@ -50,40 +50,22 @@ resource "openstack_networking_secgroup_rule_v2" "secgroup_ipa_cluster_rule_ingr
 {% endif %}
 }
 
-
-
-## Allow ingress on port 443 (HTTPS) from anywhere for the ipa nodes
-resource "openstack_networking_secgroup_rule_v2" "secgroup_ipa_cluster_rule_ingress_https_v4" {
-  direction = "ingress"
-  ethertype = "IPv4"
+#next list is generated from the ipa_cluster_allow_from_list var in in ipa_infra role
+{% for item in ipa_cluster_allow_from_list %}
+{% for my_remote_prefix,rules_list in item.items() %}
+{% for rule in rules_list %}
+resource "openstack_networking_secgroup_rule_v2" "secgroup_ipa_cluster_rule_ingress_internal_v4_{{ rule['rule_suffix'] }}" {
+  direction         = "ingress"
   security_group_id = "${openstack_networking_secgroup_v2.secgroup_ipa_cluster.id}"
-  protocol          = "tcp"
-  port_range_min    = 443
-  port_range_max    = 443
-{% if ipa_cluster_internal_subnet is defined %}
-  remote_ip_prefix  = "${data.openstack_networking_subnet_v2.ipa_cluster_subnet.cidr}"
-{% else %}
-  remote_ip_prefix = "{{ ipa_cluster_cidr }}"
-{% endif %}
+  ethertype         = "{{ rule['ethertype'] | default('IPv4') }}"
+  protocol          = "{{ rule['protocol'] }}"
+  port_range_min    = "{{ rule['port_range_min'] }}"
+  port_range_max    = "{{ rule['port_range_max'] }}"
+  remote_ip_prefix = "{{ my_remote_prefix }}"
 }
-
-## Allow ingress on port 80 (HTTP) from anywhere for the ipa nodes
-resource "openstack_networking_secgroup_rule_v2" "secgroup_ipa_cluster_rule_ingress_http_v4" {
-  direction = "ingress"
-  ethertype = "IPv4"
-  protocol          = "tcp"
-  port_range_min    = 80
-  port_range_max    = 80
-  security_group_id = "${openstack_networking_secgroup_v2.secgroup_ipa_cluster.id}"
-}
-resource "openstack_networking_secgroup_rule_v2" "secgroup_ipa_cluster_rule_ingress_ssh" {
-  direction = "ingress"
-  ethertype = "IPv4"
-  protocol          = "tcp"
-  port_range_min    = 22
-  port_range_max    = 22
-  security_group_id = "${openstack_networking_secgroup_v2.secgroup_ipa_cluster.id}"
-}
+{% endfor %}
+{% endfor %}
+{% endfor %}
 
 #####
 ##### Volumes
