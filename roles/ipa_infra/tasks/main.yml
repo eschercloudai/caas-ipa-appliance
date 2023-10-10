@@ -109,6 +109,12 @@
     - terraform_state == "present"
     - hostvars[groups['openstack'][0]].terraform_provision.outputs.cluster_gateway_ip is defined
 
+- name: set ipa_cluster_cidr when required
+  set_fact:
+    ipa_cluster_cidr: "{{ ipa_cluster_infra_terraform_output.outputs.ipa_cluster_cidr }}"
+  when:
+    - ipa_cluster_cidr is not defined
+
 # The hosts provisioned by Terraform are put into a primary group by the role
 # These tasks then add those hosts to additional groups depending on the selected options
 - name: Add cluster hosts to required groups

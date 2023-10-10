@@ -8,10 +8,10 @@ cluster_ssh_user: rocky
 ansible_user: rocky
 ipa_cluster_gateway_user: rocky
 ipa_cluster_name: "test"
-ipa_cluster_suffix: "DSkjBfsdk.iNTERNAL"
+ipa_cluster_suffix: "DSkjBfsdk.iNTERNAL" # mixed case is just for the testing. this is NOT best practice in any way
 ipa_cluster_id: "{{ ipa_cluster_name }}"
 ipa_flavor_name: "g.2.standard"
-ipa_cluster_floating_ips_wanted: yes
+ipa_cluster_floating_ips_wanted: no
 #ipa_cluster_cidr: "192.168.13.0/24"
 ipa_cluster_internal_network: "antony-routable" # use this precreated vlan provider net so we can have ironic nodes
 ipa_cluster_internal_subnet: "antony_routable_subnet" # the subnet for that netowrk to avoid extra TF hoops to jump through

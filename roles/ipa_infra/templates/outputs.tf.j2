@@ -25,6 +25,11 @@ output "cluster_nodes" {
         groups        = ["{{ ipa_cluster_name }}_primary"],
         facts  = {
           openstack_project_id = data.openstack_identity_auth_scope_v3.scope.project_id
+{% if ipa_cluster_internal_subnet is defined %}
+          ipa_cluster_cidr = "${data.openstack_networking_subnet_v2.ipa_cluster_subnet.cidr}"
+{% else %}
+          ipa_cluster_cidr = "{{ ipa_cluster_cidr }}"
+{% endif %}
         }
       }
     ],
@@ -35,6 +40,11 @@ output "cluster_nodes" {
       groups        = ["{{ ipa_cluster_name }}_replica"],
       facts  = {
         openstack_project_id = data.openstack_identity_auth_scope_v3.scope.project_id
+{% if ipa_cluster_internal_subnet is defined %}
+        ipa_cluster_cidr = "${data.openstack_networking_subnet_v2.ipa_cluster_subnet.cidr}"
+{% else %}
+        ipa_cluster_cidr = "{{ ipa_cluster_cidr }}"
+{% endif %}
       }
     }
 	]
@@ -44,4 +54,13 @@ output "cluster_nodes" {
 output "ipa_cluster_image" {
   description = "The id of the image used to build the ipa cluster nodes"
   value       = "{{ ipa_cluster_previous_image | default(ipa_cluster_image) }}"
+}
+
+output "ipa_cluster_cidr" {
+  description = "The CIDR of the internal IPA network"
+{% if ipa_cluster_internal_subnet is defined %}
+  value  = "${data.openstack_networking_subnet_v2.ipa_cluster_subnet.cidr}"
+{% else %}
+  value = "{{ ipa_cluster_cidr }}"
+{% endif %}
 }
