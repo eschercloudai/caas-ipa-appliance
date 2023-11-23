@@ -1,0 +1,35 @@
+---
+appliances_environment_root: "{{ lookup('env', 'APPLIANCES_ENVIRONMENT_ROOT') }}"
+
+# Extra vars needed to build cluster
+#cluster_terraform_template_dir: "{{ appliances_environment_root }}/cluster_terraform_template"
+# Cluster instance vars
+cluster_ssh_user: rocky
+ansible_user: rocky
+ipa_cluster_gateway_user: rocky
+ipa_cluster_name: "test"
+ipa_cluster_suffix: "DSkjBfsdk.iNTERNAL" # mixed case is just for the testing. this is NOT best practice in any way
+ipa_cluster_id: "{{ ipa_cluster_name }}"
+ipa_flavor_name: "g.2.standard"
+ipa_cluster_floating_ips_wanted: no
+#ipa_cluster_cidr: "192.168.13.0/24"
+ipa_cluster_internal_network: "antony-routable" # use this precreated vlan provider net so we can have ironic nodes
+ipa_cluster_internal_subnet: "antony_routable_subnet" # the subnet for that netowrk to avoid extra TF hoops to jump through
+ipa_replica_count: 2
+
+ipa_cluster_user_ssh_public_keys:
+  - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBL0TOpOWI9bn2JMuwxmjuM/z3aDYu7fDQk68p+Wafe3 a.cleave@eshchercloud.ai"
+  - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILsBdBzq1y4Vtr1FTJvF557t/Tvn+ZOSx5HouJ89B9rm david@macbookpro"
+  - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKGHDwDB7Z7JQ/Sr9VZlnoAjzJOdNZQIE8vxRW//rK1h mouza"
+  -  ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOvn6dvyvvNyzBH9RdNujv3jR72Gc/feKi9OuMhhjE1u mkarpiarz@Escher-MBP
+
+#ipa_cluster_image: 2840a5b1-ccaa-4943-99d3-05474991d727
+ipa_cluster_image: 4f34d6a1-de08-4857-b9eb-f80cc403ba2a
+#cluster_upgrade_system_packages: true # this is needed as it forces the terraform to use the target state rather then the previous state and then try and update them later. This might not be so great long term but wiith quick iteration befor the customer is on when it is safe to nuke and reboot the lot. . .this is really useful
+
+
+ipa_cluster_external_network: "Internet"
+
+ipa_cluster_nameservers:
+  - 1.1.1.1
+  - 8.8.8.8

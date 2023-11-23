@@ -1,0 +1,15 @@
+---
+- name: WARNING STORING IPA ADMIN SECRETS IN PLAIN TEXT ON the deploy node is BAD PRACTICE
+  debug:
+    msg: THIS IS A BAD IDEA AND VERY INSECURE
+
+- name: Ensure lookup directory exists
+  file:
+    path: "{{ persist_ipa_secrets_insecure_path }}"
+    state: directory
+    mode: "700"
+
+- ansible.builtin.set_fact:
+    become: yes
+    vault_ipa_ds_password: "{{ lookup('password', persist_ipa_secrets_insecure_path+'/ipa_ds_password' ) }}"
+    vault_ipa_admin_password: "{{ lookup('password', persist_ipa_secrets_insecure_path+'/ipa_admin_password' ) }}"

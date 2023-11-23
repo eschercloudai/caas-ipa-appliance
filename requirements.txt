@@ -1,0 +1,8 @@
+ansible==6.0.0
+openstacksdk>1
+python-cinderclient==9.3.0
+python-dateutil==2.8.2
+python-keystoneclient==5.1.0
+python-magic==0.4.27
+python-novaclient==18.3.0
+python-openstackclient==6.2.0

@@ -1,0 +1,6 @@
+---
+- ansible.builtin.include_tasks: insecure.yml
+  when: persist_ipa_secrets_insecure_storage | bool
+
+- ansible.builtin.include_tasks: secure-d42.yml
+  when: not persist_ipa_secrets_insecure_storage | bool

@@ -1,0 +1,3 @@
+---
+persist_ipa_secrets_insecure_storage: true
+persist_ipa_secrets_insecure_path: "{{ appliances_environment_root }}/passwords"

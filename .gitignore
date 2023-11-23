@@ -1,0 +1,7 @@
+/ansible
+/bin
+/terraform
+*.tfstate
+*.tfstate.backup
+/dev.sh
+/environments/*/passwords

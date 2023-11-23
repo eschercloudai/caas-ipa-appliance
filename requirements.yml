@@ -1,0 +1,10 @@
+---
+collections:
+#- name: openstack.cloud
+#  version: 1.10.0
+- name: https://github.com/eschercloudai/ansible-collection-terraform
+  type: git
+  version: feat/ecai-fixes
+- name: containers.podman
+  version: 1.10.3
+...
