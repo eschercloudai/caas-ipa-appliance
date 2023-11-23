@@ -1,3 +1,3 @@
 [submodule "vendor/eschercloudai/ansible-freeipa-appliance"]
 	path = vendor/eschercloudai/ansible-freeipa-appliance
-	url = git@github.com:eschercloudai/ansible-freeipa-appliance-private.git
+	url = git@github.com:eschercloudai/ansible-freeipa-appliance.git

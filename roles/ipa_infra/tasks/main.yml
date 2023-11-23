@@ -111,7 +111,7 @@
 
 - name: set ipa_cluster_cidr when required
   set_fact:
-    ipa_cluster_cidr: "{{ ipa_cluster_infra_terraform_output.outputs.ipa_cluster_cidr }}"
+    ipa_cluster_cidr: "{{ terraform_provision.outputs.ipa_cluster_cidr }}"
   when:
     - ipa_cluster_cidr is not defined
 
@@ -122,4 +122,5 @@
     name: "{{ item }}"
     groups: "{{ hostvars[item].group_names | stackhpc.terraform.terraform_infra_expand_groups(ipa_cluster_groups_required) }}"
   loop: "{{ groups.get('cluster', []) }}"
+
 
