@@ -1,5 +1,7 @@
 # caas-ipa-appliance
 
+## Initial setup and deploy
+
 This is a quick guide to using the appliance
 
 first steps are to clone the repo and the copy the test environment ready for your new deployment here I'm using ci-prod
@@ -18,6 +20,20 @@ pip install -r requirements.txt
 ```
 
 in the above we source the venv we populated but we also need to source the vars for this deployment `environments/ci-prod/activate` (remember to user the name of your environment) and our openstack creds  be this a clouds.yaml or openrc format here I use the openrc for this user and project
+
+you will need to update the hosts file in `environments/ci-prod/inventory/hosts` to point the ansible_python_interpreter var to the location of python3 in the venv
+
+```
+$ which python3
+~/venvs/ipaaas/bin/python3
+$ cat environments/test/inventory/hosts
+[openstack]
+localhost  ansible_connection=local ansible_python_interpreter=/home/cloud-user/venvs/ipaaas/bin/python3
+```
+
+in the above I specify the full path to it but ~/ would work too
+
+this is required as ansible needs to access some of the requirements installed in the venv when connecting to localhost to run terraform
 
 ```
 (ipaas) [cloud-user@control ~]$ cd caas-ipa-appliance
@@ -51,7 +67,6 @@ and then customise the environment
 < ipa_replica_count: 2
 ---
 > ipa_cluster_internal_network: "slurm-net" # use this precreated net we are in to avoid needing a pointless floating ip
-
 > ipa_cluster_internal_subnet: "slurm-subnet" # the subnet for that netowrk to avoid extra TF hoops to jump through
 > ipa_replica_count: 0
 ```
@@ -266,3 +281,7 @@ Number of entries returned 8
   Role name: host admin
   Member users: ansible_host_service
   Privileges: Host Administrators, Host Group Administrators, DNS Servers, Host Enrollment
+
+
+```
+
