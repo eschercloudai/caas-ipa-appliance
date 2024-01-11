@@ -1,7 +1,5 @@
 # caas-ipa-appliance
 
-## Initial setup and deploy
-
 This is a quick guide to using the appliance
 
 first steps are to clone the repo and the copy the test environment ready for your new deployment here I'm using ci-prod
@@ -53,6 +51,7 @@ and then customise the environment
 < ipa_replica_count: 2
 ---
 > ipa_cluster_internal_network: "slurm-net" # use this precreated net we are in to avoid needing a pointless floating ip
+
 > ipa_cluster_internal_subnet: "slurm-subnet" # the subnet for that netowrk to avoid extra TF hoops to jump through
 > ipa_replica_count: 0
 ```
@@ -267,7 +266,3 @@ Number of entries returned 8
   Role name: host admin
   Member users: ansible_host_service
   Privileges: Host Administrators, Host Group Administrators, DNS Servers, Host Enrollment
-
-
-```
-
